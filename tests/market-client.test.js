@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {loadAsset,loadPortfolioAssets} from '../web/market-client.js';
+const now=Date.parse('2026-10-11T12:00:00Z');
+function asset(symbol='ARKK'){const history=Array.from({length:210},(_,i)=>({date:new Date(now-(211-i)*86400000).toISOString().slice(0,10),close:100+i/10,adjusted:100+i/10,volume:1000}));return {symbol,info:{currency:'USD'},history};}
+test('ticker outside snapshot loads without portfolio data in request',async()=>{const assets={};let request;const result=await loadAsset('ARKK',assets,'https://example.com/api/market',async(url,options)=>{request={url:String(url),options};return {ok:true,json:async()=>({asset:asset()})};},now);assert.equal(result.symbol,'ARKK');assert.equal(assets.ARKK,result);assert.equal(request.url,'https://example.com/api/market?symbol=ARKK');assert.equal(request.options.credentials,'omit');assert.equal(request.options.body,undefined);});
+test('fresh snapshots avoid unnecessary provider requests',async()=>{const a=asset();assert.equal(await loadAsset('ARKK',{ARKK:a},null,()=>assert.fail('unexpected fetch'),now),a);});
+test('invalid ticker, provider errors and mismatched symbol reject',async()=>{await assert.rejects(loadAsset('../evil',{},'https://example.com'));await assert.rejects(loadAsset('ARKK',{},'https://example.com',async()=>({ok:false,json:async()=>({error:'Unavailable'})}),now),/Unavailable/);await assert.rejects(loadAsset('ARKK',{},'https://example.com',async()=>({ok:true,json:async()=>({asset:asset('OTHER')})}),now),/טיקר שונה/);});
+test('failed refresh preserves original dates without authorizing stale prices',async()=>{const a=asset();const result=await loadAsset('ARKK',{ARKK:a},'https://example.com',async()=>{throw new TypeError('offline');},now+20*86400000);assert.equal(result.history.at(-1).date,a.history.at(-1).date);assert.ok(result.warning);});
+test('external accounts never require a remote ticker lookup',async()=>{const result=await loadPortfolioAssets([{ticker:'VOO',external:true,value:99999}],{},null);assert.deepEqual(result,[]);});

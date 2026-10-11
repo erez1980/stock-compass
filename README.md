@@ -11,7 +11,8 @@ Hebrew RTL stock & ETF research and portfolio action planner, built for GitHub P
 - External pension/training-fund holdings count toward allocation and stay locked from sales.
 - New-money-only or sale-funded rebalance mode. No fabricated exact ETF overlap.
 - Browser-local persistence, portfolio JSON import/export, price-history CSV import and print/PDF output.
-- 60 initial USD securities in `universe.json`. Add any supported USD symbol there for recurring refreshes, or supply extra symbols in workflow dispatch for one deployment. Arbitrary tickers can also be analyzed using a local CSV.
+- Open ticker lookup via the read-only `/api/market?symbol=...` service. Yahoo-supported stocks, ETFs and funds require at least 210 valid daily observations. Non-USD quotes use a dated FX conversion for USD budgets and share estimates; technical signals remain in the native currency. Stale FX blocks execution.
+- 60 initial USD securities in `universe.json`. Add any supported USD symbol there for recurring refreshes, or supply extra symbols in workflow dispatch for one deployment. The initial universe is a daily cache and shortcut list, not a restriction. Other symbols load on demand; exchange suffixes such as `.TA`, `.L` or `.DE` may be required. CSV import remains available.
 
 ## Publish on GitHub Pages
 
@@ -31,6 +32,10 @@ gh workflow run pages.yml
 Alternatively upload this repository, then Settings → Pages → Source → **GitHub Actions** and run **Refresh market data and deploy Pages**.
 
 The workflow runs after pushes, on demand, and at 23:25 UTC Monday–Friday. GitHub schedules may be delayed or disabled after inactivity. It downloads market data before deployment; the repository's initial `market.json` is deliberately empty. A run with no real data fails rather than publishing invented prices. No API key is required. Yahoo may throttle requests; refresh errors retain previous data only if it exists locally, preserving price dates. Because the workflow does not commit snapshots, a fresh hosted run cannot reuse prior deployment data; failure leaves the previous Pages deployment intact.
+
+## On-demand service
+
+`api/market.py` is a Vercel Python function using the same yfinance fetcher. Set `web/data/service.json` to `{ "marketEndpoint": "https://YOUR-PROJECT.vercel.app/api/market" }`. This endpoint accepts one symbol, never a URL or a portfolio body. Successful responses are cached for an hour on the CDN; no portfolio database exists. GitHub Pages serves the frontend while Vercel serves ticker data. Source failures are shown explicitly; an existing snapshot retains its original date and stale execution stays blocked.
 
 ## Local use and checks
 
@@ -54,6 +59,6 @@ Channels require approximately 85% of expected trading sessions plus coverage of
 
 Targets must sum to 100%, including locked external assets. Eligible buy deficits share available cash proportionally. Unallocated funds stay in cash. Sales reserve a simple user-input tax estimate using proportional cost basis. Actual taxes, lot selection, transaction costs and FX must be verified with the broker. Short horizons or low drawdown tolerance block automatic portfolio transaction plans. All recommendations are conditional on the input data and targets.
 
-Your actual holdings are stored **only in this browser's localStorage**. They are not committed, sent to GitHub or collected by the app. Shared devices can access localStorage. The optional Google Fonts request sends normal connection metadata, not portfolio holdings. There are no analytics scripts and no brokerage connection. JSON exports may contain financial information; keep them private.
+Your actual holdings are stored **only in this browser's localStorage**. They are not committed, sent to GitHub or collected by the app. On-demand lookups send only the requested tradable ticker to the Vercel market service and Yahoo; holdings values, cost bases, targets and external account details remain in the browser. Provider/host connection logs may include the requested ticker. Shared devices can access localStorage. The optional Google Fonts request sends normal connection metadata, not portfolio holdings. There are no analytics scripts and no brokerage connection. JSON exports may contain financial information; keep them private.
 
 Sources: [yfinance documentation](https://ranaroussi.github.io/yfinance/) and [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). Yahoo Finance data access is unofficial; verify data and comply with applicable source terms, especially before commercial use.

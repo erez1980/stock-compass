@@ -31,6 +31,7 @@ jobs:
           node-version: '22'
       - run: npm test && npm run check
       - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -p "test_*.py"
       - name: Download verified-source market history
         env:
           EXTRA_TICKERS: ${{ inputs.tickers }}
