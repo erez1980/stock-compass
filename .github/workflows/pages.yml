@@ -1,0 +1,53 @@
+name: Refresh market data and deploy Pages
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '25 23 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: Extra USD tickers for this run (comma separated); edit universe.json to keep them
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test && npm run check
+      - run: pip install -r requirements.txt
+      - name: Download verified-source market history
+        env:
+          EXTRA_TICKERS: ${{ inputs.tickers }}
+        run: python scripts/update_market.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
