@@ -26,7 +26,8 @@ export function analyze(asset,now=Date.now()) {
   const p=rows.map(r=>r.adjusted),last=p.at(-1),price=rows.at(-1).close;
   const ma50=mean(p.slice(-50)),ma200=mean(p.slice(-200)),hi=Math.max(...p.slice(-252)),momentum=last/p.at(-127)-1;
   const age=(now-Date.parse(rows.at(-1).date+'T23:59:59Z'))/86400000;
-  const fresh=age>=-1&&age<=5;
+  const fxAge=asset.fx?(now-Date.parse(asset.fx.date+'T23:59:59Z'))/86400000:0;
+  const fresh=age>=-1&&age<=5&&Number.isFinite(fxAge)&&fxAge>=-1&&fxAge<=5;
   const strength=rsi(p),vol=mean(rows.slice(-20).map(r=>r.volume||0)),volumeRatio=vol?rows.at(-1).volume/vol:null;
   const channels=[3,5,10].map(y=>channel(rows,y)).filter(Boolean),long=channels.find(c=>c.years===5)||channels[0];
   let score=0;const reasons=[];

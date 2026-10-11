@@ -19,9 +19,9 @@ def number(value):
     except (TypeError, ValueError):
         return None
 
-def fetch(symbol):
+def fetch(symbol, require_usd=True):
     ticker = yf.Ticker(symbol)
-    history = ticker.history(start=(datetime.now(timezone.utc)-timedelta(days=365.25*11)).strftime('%Y-%m-%d'), auto_adjust=False, raise_errors=True)
+    history = ticker.history(start=(datetime.now(timezone.utc)-timedelta(days=365.25*11)).strftime('%Y-%m-%d'), auto_adjust=False, raise_errors=True, timeout=15)
     if history.empty or 'Adj Close' not in history:
         raise ValueError('No adjusted daily price history')
     rows = []
@@ -51,7 +51,9 @@ def fetch(symbol):
     except Exception:
         name, warning = symbol, 'Fundamental metadata unavailable'
     currency = info.get('currency') or ticker.history_metadata.get('currency')
-    if currency != 'USD':
+    if not currency:
+        raise ValueError('Trading currency unavailable')
+    if require_usd and currency != 'USD':
         raise ValueError(f'Only USD securities supported; currency={currency}')
     info['currency'] = currency
     return {'symbol':symbol,'name':name,'info':info,'holdings':holdings,'history':rows,'metadataAsOf':datetime.now(timezone.utc).date().isoformat(),'source':'Yahoo Finance via yfinance (unofficial EOD source)','warning':warning}
