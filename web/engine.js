@@ -1,4 +1,10 @@
 export const VERSION = '1.0.0';
+// Young crypto funds lack multi-year channels; the spot pair has the long history.
+const SPOT={BTC:['BTC','IBIT','FBTC','BITB','ARKB','HODL','BRRR','EZBC','BTCO','BTCW'],ETH:['ETH','ETHA','FETH','ETHW','CETH','QETH','EZET','ETHV']};
+export function spotAlternative(symbol) {
+  const coin=Object.keys(SPOT).find(k=>SPOT[k].includes(symbol));
+  return coin?coin+'-USD':null;
+}
 export const mean = a => a.reduce((s,v)=>s+v,0)/a.length;
 export function rsi(prices, period=14) {
   if(prices.length<=period) return null;

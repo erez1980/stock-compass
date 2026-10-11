@@ -16,3 +16,11 @@ test('sale-funded plan blocked if sale data is missing',()=>{const r=plan([{tick
 test('rebalance reserves estimated tax, never spends more than available',()=>{const r=plan([{ticker:'ABC',value:10000,basis:8000,target:20},{ticker:'XYZ',value:1000,basis:1000,target:80}],0,{mode:'rebalance',taxRate:25},{ABC:fixture(),XYZ:fixture('XYZ')},now);assert.equal(r.sells.length,1);assert.ok(r.tax>0);assert.ok(Math.abs(r.buys.reduce((s,b)=>s+b.amount,0)+r.remaining+r.tax-r.sells[0].amount)<.001);});
 test('allocation suggestion accounts for large external S&P core',()=>{const r=suggestTargets([{ticker:'VOO',value:200000,basis:200000,target:0,external:true},{ticker:'VGT',value:30000,basis:25000,target:0,external:false},{ticker:'IYW',value:2000,basis:2000,target:0,external:false}],5000);assert.ok(Math.abs(r.reduce((s,x)=>s+x.target,0)-100)<.01);assert.equal(r.find(x=>x.ticker==='IYW').target,0);assert.ok(!r.some(x=>x.ticker==='VOO'&&!x.external));assert.ok(r.find(x=>x.ticker==='VXUS').target>0);});
 test('stale exchange rate blocks non-dollar execution',()=>{const f=fixture();f.fx={date:'2026-09-01'};assert.equal(analyze(f,now).fresh,false);f.fx.date='2026-10-08';assert.equal(analyze(f,now).fresh,true);});
+test('young crypto funds point to the spot pair', async () => {
+  const {spotAlternative}=await import('../web/engine.js');
+  assert.equal(spotAlternative('BTC'),'BTC-USD');
+  assert.equal(spotAlternative('IBIT'),'BTC-USD');
+  assert.equal(spotAlternative('ETHA'),'ETH-USD');
+  assert.equal(spotAlternative('GBTC'),null);
+  assert.equal(spotAlternative('SPY'),null);
+});

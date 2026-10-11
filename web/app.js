@@ -1,5 +1,5 @@
 import {loadAsset,loadPortfolioAssets} from './market-client.js';
-import {analyze,plan,validatePortfolio,suggestTargets} from './engine.js';
+import {analyze,plan,validatePortfolio,suggestTargets,spotAlternative} from './engine.js';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n),pct=n=>Number.isFinite(n)?(n*100).toFixed(1)+'%':'לא זמין';
 let market={assets:{}},currentAsset=null,currentAnalysis=null,rows=[];
@@ -29,7 +29,10 @@ function chart(years){const a=currentAnalysis,channel=a.channels.find(c=>c.years
   const all=[...p,...bands.flat()],lo=Math.min(...all)*.95,hi=Math.max(...all)*1.05;const x=i=>55+(Date.parse(data[i].date)-start)/(end-start)*610,y=v=>215-(Math.log(v)-Math.log(lo))/(Math.log(hi)-Math.log(lo))*185;
   const points=values=>values.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ');
   $('chart').innerHTML=`<svg viewBox="0 0 700 255" role="img" aria-label="היסטוריית מחיר מתואם ${esc(currentAsset.symbol)}${channel?' וערוץ רגרסיה':' לשנה האחרונה'}"><title>מחיר מתואם; ציר אנכי לוגריתמי; גבולות ערוץ ±2 סטיות תקן</title>${[0,.33,.66,1].map(t=>{const v=Math.exp(Math.log(lo)+(Math.log(hi)-Math.log(lo))*t);return `<line x1="55" x2="665" y1="${y(v)}" y2="${y(v)}" stroke="#e4e9e2"/><text x="4" y="${y(v)+4}" font-size="10" fill="#647775">${v.toFixed(0)}</text>`;}).join('')}${channel?`<polygon points="${points(bands.map(b=>b[0]))} ${bands.map((b,i)=>x(i).toFixed(1)+','+y(b[2]).toFixed(1)).reverse().join(' ')}" fill="#eaf0df"/><polyline points="${points(bands.map(b=>b[1]))}" fill="none" stroke="#95aa80" stroke-dasharray="5 5"/>`:''}<polyline points="${points(p)}" fill="none" stroke="#176d57" stroke-width="2"/><text x="55" y="245" font-size="10" fill="#647775">${data[0].date}</text><text x="595" y="245" font-size="10" fill="#647775">${data.at(-1).date}</text></svg>`;
-  $('channel-note').textContent=channel?`${years} שנים · תשואה שנתית של קו הרגרסיה ${pct(channel.annualized)} · מיקום בערוץ ${channel.position.toFixed(2)} (‎−1 תחתית, ‎+1 תקרה) · ציר מחיר לוגריתמי`:'היסטוריה אינה מספיקה לערוץ המבוקש. מוצגת השנה האחרונה בלבד.';
+  $('channel-note').textContent=channel?`${years} שנים · תשואה שנתית של קו הרגרסיה ${pct(channel.annualized)} · מיקום בערוץ ${channel.position.toFixed(2)} (‎−1 תחתית, ‎+1 תקרה) · ציר מחיר לוגריתמי`:'';
+  if(!channel){const [yy,mm]=currentAsset.history[0].date.split('-'),other=a.channels.map(c=>c.years),alt=spotAlternative(currentAsset.symbol);
+    $('channel-note').innerHTML=`אין מספיק היסטוריה לערוץ של ${years} שנים: הנתונים הזמינים ל־<bdi>${esc(currentAsset.symbol)}</bdi> מתחילים ב־${mm}/${yy}. ${other.length?`ערוץ זמין ל־${other.join(', ')} שנים. `:''}מוצגת השנה האחרונה בלבד.${alt?` למגמה ארוכת טווח של המטבע עצמו: <button type="button" class="link-button" data-alt="${esc(alt)}" dir="ltr">${esc(alt)}</button>`:''}`;
+    $('channel-note').querySelector('[data-alt]')?.addEventListener('click',e=>{$('ticker').value=e.target.dataset.alt;analyzeTicker();});}
   document.querySelectorAll('[data-years]').forEach(b=>b.classList.toggle('selected',+b.dataset.years===years));
 }
 function metric(title,value){return `<div class="metric"><span>${title}</span><strong>${value}</strong></div>`;}
