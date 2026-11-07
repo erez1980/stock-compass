@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: deploy-ci
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: deploy-ci
     steps:
       - name: Deploy
         id: deployment
